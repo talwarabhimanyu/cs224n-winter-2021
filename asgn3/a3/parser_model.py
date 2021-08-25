@@ -72,10 +72,15 @@ class ParserModel(nn.Module):
         ###     Dropout: https://pytorch.org/docs/stable/nn.html#dropout-layers
         ### 
         ### See the PDF for hints.
-
-
-
-
+        self.embed_to_hidden_weight = nn.Paramater(torch.zeros(n_features*embed_size, hidden_size))
+        nn.init.xavier_uniform_(self.embed_to_hidden_weight)
+        self.embed_to_hidden_bias = nn.Parameter(torch.zeros(hidden_size))
+        nn.init.uniform_(self.embed_to_hidden_bias)
+        self.hidden_to_logits_weight = nn.Parameter(torch.zeros(hidden_size, 3))
+        nn.init.xavier_uniform_(self.hidden_to_logits_weight)
+        self.hidden_to_logits_bias = nn.Parameter(torch.zeros(3))
+        nn.init.uniform_(self.hidden_to_logits_bias)
+        self.dropout = nn.Dropout(dropout_prob)
         ### END YOUR CODE
 
     def embedding_lookup(self, w):
@@ -106,12 +111,8 @@ class ParserModel(nn.Module):
         ###     Gather: https://pytorch.org/docs/stable/torch.html#torch.gather
         ###     View: https://pytorch.org/docs/stable/tensors.html#torch.Tensor.view
         ###     Flatten: https://pytorch.org/docs/stable/generated/torch.flatten.html
-
-
-
+        return torch.index_select(self.embeddings, w.flatten()).view(w.shape[0], -1)
         ### END YOUR CODE
-        return x
-
 
     def forward(self, w):
         """ Run the model forward.
@@ -143,8 +144,10 @@ class ParserModel(nn.Module):
         ### Please see the following docs for support:
         ###     Matrix product: https://pytorch.org/docs/stable/torch.html#torch.matmul
         ###     ReLU: https://pytorch.org/docs/stable/nn.html?highlight=relu#torch.nn.functional.relu
-
-
+        x = self.embedding_lookup(w) # B x dm
+        h = nn.ReLU()(torch.matmul(x, self.embedding_to_hidden_weight) + self.embedding_to_hidden_bias) # B x h
+        h = self.dropout(h)
+        logits = torch.matmul(h, self.hidden_to_logits_weight) + self.hidden_to_logits_bias
         ### END YOUR CODE
         return logits
 
